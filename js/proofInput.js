@@ -1,9 +1,12 @@
+import {treeToFormula} from '../js/treeToFormula.js';
+import ProofValidator from '../js/proofValidator.js';
+import ProofLine from '../js/proofLine.js'; //temp testing
+
 /*
  *	JQuery to manipulate elements and validations
  */
 $(document).ready(function(){
-	$.getScript("js/tombstone.min.js"); //preload tombstone logic library
-	
+	console.log("we get here");
 	var formulaValid 	= false;
 	var formulaString 	= "";
 	var currentLine 	= 1; //current line of the proof
@@ -47,7 +50,6 @@ $(document).ready(function(){
 		}
 	});
 	
-	//bad input animation
 	$("#logic-submit").click(function(){
 		if(formulaValid == false){
 			$("#formula").val( $("#formula").val().toUpperCase() );
@@ -159,13 +161,17 @@ $(document).ready(function(){
 		$("#formula").prop("disabled", false); //disabled
 	});
 	
+	
+	$.getScript("js/tombstone.min.js"); //preload tombstone logic library
+	//$.getScript("js/proofGen.js"); //load proof scripts
+	
 	/**
 	*	A function to determine if a provided logic formula is provable by Natural Deduction (a tautology)
 	*	@param {String} formula - User's formula input
 	*	@return {boolean} - Returns whether or not the logic formula is a tautology
 	*/
 	function isProvable (formula) {
-		console.clear();
+		//console.clear();
 		//replace all special characters with something more relatable
 		formula = formula.replace(new RegExp("⇒", "g"), "->");
 		formula = formula.replace(new RegExp("∧", "g"), "&");
@@ -193,6 +199,21 @@ $(document).ready(function(){
 				return false;
 			}
 		}
+		
+		//ProofLine test
+		var pl = new ProofLine(1, 5, "(A||~A)=>(A||~A)", "impintro", 4);
+		console.log("pl test: " + pl.getLineAsString());
+
+		console.log(statement.table()); 
+		console.log(statement.symbols);
+		console.log(statement.variables);
+		console.log(statement.symbolsRPN);
+		console.log(statement.tree["tree"][0]);
+		console.log("Statement: " + statement.statement);
+		var f = treeToFormula(statement.tree["tree"][0], 0);
+		console.log(f);
+		console.log("Matches with original formula: " + (f===formula))
+		console.log(JSON.stringify(statement.tree));
 		
 		return true;
 	}
