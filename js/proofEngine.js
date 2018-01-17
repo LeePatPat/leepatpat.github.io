@@ -11,7 +11,6 @@ var $ = require('jquery');
  *	JQuery to manipulate elements and validations
  */
 $(document).ready(function(){
-	console.log("we get here");
 	var formulaValid 	= false;
 	var formulaString 	= "";
 	var currentLine 	= 1; //current line of the proof
