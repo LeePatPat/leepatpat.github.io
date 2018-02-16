@@ -95,11 +95,12 @@ $(document).ready(function(){
 				//add final row of proof to proof-table
 				var newRow = $("<tr>");
 				var cols = "";
-				cols += '<td style="width: 10%">		 <input name="dependencyInput" class="form-control input-sm" placeholder="Deps." title="Cannot edit: the final line in the proof must have no line dependencies" value=" " disabled></td>';
-				cols += '<td style="width: 40%">		 <input name="proofLineInput" class="form-control input-sm" placeholder="Proof Line (use symbols & F for ⊥)" title="Cannot edit: the final line in the proof must be the original proposition" value="'+formulaString+'" disabled></td>';
-				cols += '<td>							 <select name="ruleInput" class="selectpicker form-control input-sm"><option disabled selected value="null">select rule</option><option value="assume">assume</option><option value="andIntro">∧-intro</option><option value="andElim">∧-elim</option><option value="impIntro">→-intro</option><option value="impElim">→-elim</option><option value="orIntro">∨-intro</option><option value="orElim">∨-elim</option><option value="notIntro">¬-intro</option><option value="notElim">¬-elim</option><option value="raa">RAA</option><option value="efq">⊥-elim</option></select></td>';
-				cols += '<td style="width: 10%">		 <input name="justificationInput" class="form-control input-sm" placeholder="Justifications" title="Rule justifications: e.g. 1,2"></td>';
-				cols += '<td style="visibility: hidden"> <button class="btn-danger btn-sm btnCheckRow">?</button> </td>';
+				cols += '<td style="width: 10%">		 <input name="dependencyInput" class="form-control input-sm" title="Cannot edit: the final line in the proof must have no line dependencies" value=" " disabled></td>';
+				cols += '<td style="width: 3%">		 	 <p style="margin: 0" name="lineNum">(1)</p> </td>';
+				cols += '<td style="width: 40%">		 <input name="proofLineInput" class="form-control input-sm" title="Cannot edit: the final line in the proof must be the original proposition" value="'+formulaString+'" disabled></td>';
+				cols += '<td>							 <select name="ruleInput" class="selectpicker form-control input-sm"><option value="null" style="display: none"></option><option value="assume">assume</option><option value="andIntro">∧-intro</option><option value="andElim">∧-elim</option><option value="impIntro">→-intro</option><option value="impElim">→-elim</option><option value="orIntro">∨-intro</option><option value="orElim">∨-elim</option><option value="notIntro">¬-intro</option><option value="notElim">¬-elim</option><option value="raa">RAA</option><option value="efq">⊥-elim</option></select></td>';
+				cols += '<td style="width: 10%">		 <input name="justificationInput" class="form-control input-sm" title="Rule justifications: e.g. 1,2"></td>';
+				cols += '<td> 							 <button class="btn-success btn-sm btnCheckRow">?</button> </td>';
 				cols += '<td style="visibility: hidden"> <button class="btn-danger btn-sm btnDelRow">x</button> </td>';
 				cols += '<td> 							 <button class="btn-info btn-sm btnAddRowAbove">↑</button> </td>';
 				cols += '<td style="visibility: hidden"> <button class="btn-info btn-sm btnAddRowBelow">↓</button> </td>';
@@ -213,14 +214,38 @@ $(document).ready(function(){
 	$("body").on("click", "#proof-check", function(){
 		//loop through each line of the proof table and display feedback
 		var proofData = [], //array of ProofLine objects. Aka the proof.
-			proofValid = true;
+			proofValid = true,
 			counter = 1;
+
+		var valid = true,
+			invalidLineNum = -1,
+			errorString = "";
 		$("#proof-table tr").each(function(i, row){
 			var $row   = $(row),
 				$deps  = $row.find('input[name*="dependencyInput"]').val().replace(/\s/g,''),
 				$line  = $row.find('input[name*="proofLineInput"]').val().toUpperCase().replace(/\s/g,''),
 				$rule  = $row.find('select[name*="ruleInput"]').find(":selected").val().toLowerCase().replace(/\s/g,''),
 				$just  = $row.find('input[name*="justificationInput"]').val().toUpperCase().replace(/\s/g,'');
+
+			//check if current line is wff
+			let currentTombstoneObject = null;
+			let currentTombstoneString = null;
+			try{
+				currentTombstoneObject = new tombstone.Statement( toTombstoneString($line) );
+				currentTombstoneString = toTombstoneString(currentTombstoneObject.statement);
+			}catch(e){
+				valid = false;
+				invalidLineNum = i+1;
+				errorString = "[Line " +invalidLineNum+"]: Formula syntax error.";
+				return false; //break
+			}
+
+			if(currentTombstoneString !== to103wff(currentTombstoneString) ){
+				valid = false;
+				invalidLineNum = i+1;
+				errorString = "[Line " +invalidLineNum+"]: Formula is not a wff. Perhaps you meant: " + toNatdudString(to103wff(currentTombstoneString));
+				return false; //break
+			}
 
 			$row.find('input[name*="proofLineInput"]').val( toNatdudString($line) );
 			$row.find('input[name*="dependencyInput"]').val( $deps );
@@ -233,6 +258,10 @@ $(document).ready(function(){
 			proofData.push(new ProofLine($deps, counter++, toTombstoneString($line), $rule, $just));
 		});
 
+		if(!valid){
+			displayFeedback(errorString);
+			return false;
+		}
 
 		var proof_validator = new ProofValidator(new tombstone.Statement(toTombstoneString(formulaString)).tree["tree"][0], proofData, true);
 
@@ -247,35 +276,53 @@ $(document).ready(function(){
 		if( $("#proof-table > tr").length > 1 ){
 			$(this).closest("tr").remove(); //remove the closest row to the button
 		}
+		updateRowNumbers();
 	});
 	$("#proof-area").on("click", "#proof-table .btnAddRowAbove", function(){
 		var newRow = $("<tr>");
 		var cols = getCleanRow();
 		newRow.append(cols);
 		newRow.insertBefore($(this).parents().closest("tr")); //insert fresh row before current row
+		updateRowNumbers();
 	});
 	$("#proof-area").on("click", "#proof-table .btnAddRowBelow", function(){
 		var newRow = $("<tr>");
 		var cols = getCleanRow();
 		newRow.append(cols);
 		newRow.insertAfter($(this).parent().closest("tr")); //insert fresh row after current row
+		updateRowNumbers();
 	});
 	$("#proof-area").on("click", "#proof-table .btnCheckRow", function(){
+		var $row     	= $(this).parent().parent();
+		var currLineNum = $row.index()+1;
+		var currLine 	= $row.find("input[name='proofLineInput']").val().replace(/\s/g,'').toUpperCase();
+
+
+		//check if tombstone object is sensible
 		let formulaTombstoneObject = null;
 		let formulaTree = null;
 		let partialProofData = []; //array of ProofLine objects
 		try{
-			formulaTombstoneObject = new tombstone.Statement( toTombstoneString(formulaString) );
+			formulaTombstoneObject = new tombstone.Statement( toTombstoneString(currLine) );
 			formulaTree = formulaTombstoneObject.tree["tree"][0];
 		}catch(e){
-			displayFeedback("The line you have attempted to check is not a WFF.");
+			displayFeedback("[Line " + currLineNum + "]: Formula syntax error.");
 			return false;
 		}
 
-		var $row     	= $(this).parent().parent();
-		var currLineNum = $row.index()+1;
+
+
+		//check if current line is a WFF
+		let formulaStatementString = toTombstoneString(formulaTombstoneObject.statement);
+		let statementStringWff = to103wff(formulaStatementString);
+		if(formulaStatementString !== statementStringWff){
+			displayFeedback("[Line " + currLineNum + "]: Formula is not a wff. Perhaps you meant: " + toNatdudString(statementStringWff));
+			return false;
+		}
+
+
+
 		var currDeps    = $row.find("input[name='dependencyInput']").val().replace(/\s/g,'').split(',');
-		var currLine 	= $row.find("input[name='proofLineInput']").val().replace(/\s/g,'').toUpperCase();
 		var currRule 	= $row.find("select[name='ruleInput']").find(":selected").val().toLowerCase();
 		var currJust 	= $row.find("input[name='justificationInput']").val().replace(/\s/g,'').split(',');
 			currDeps 	= clearEmptyStringsFromArray(currDeps);
@@ -303,8 +350,11 @@ $(document).ready(function(){
 		}
 
 
+		var valid = true,
+			invalidLineNum = -1,
+			actualString = "";
 		//loop through all table rows up until the row that wants to be checked
-		$("#proof-table tr").each(function(i, row){
+		$("#proof-table tr").each(function(i, row){	
 			if(i+1 === currLineNum) return false; //we've reached the current line, break
 			if( $.inArray( (i+1).toString(), currJust ) === -1 ) return true; //skip to next line if this line is not in the justifications
 
@@ -313,6 +363,17 @@ $(document).ready(function(){
 				$line  = $row.find('input[name*="proofLineInput"]').val().toUpperCase().replace(/\s/g,''),
 				$rule  = $row.find('select[name*="ruleInput"]').find(":selected").val().toLowerCase().replace(/\s/g,''),
 				$just  = $row.find('input[name*="justificationInput"]').val().toUpperCase().replace(/\s/g,'');
+
+			//check if current line is wff
+			let currentTombstoneObject = new tombstone.Statement( toTombstoneString($line) );
+			let currentTombstoneString = toTombstoneString(currentTombstoneObject.statement);
+			if(currentTombstoneString !== to103wff(currentTombstoneString) ){
+				valid = false;
+				invalidLineNum = i+1;
+				actualString = to103wff(currentTombstoneString);
+				return false; //break
+			}
+
 
 			$row.find('input[name*="proofLineInput"]').val( toNatdudString($line) );
 			$row.find('input[name*="dependencyInput"]').val( $deps );
@@ -324,17 +385,40 @@ $(document).ready(function(){
 
 			partialProofData.push(new ProofLine($deps, (i+1).toString(), toTombstoneString($line), $rule, $just));
 		});
+
+		if(!valid){
+			displayFeedback("[Line " +invalidLineNum+"]: This line is not a wff. Perhaps you meant: " + toNatdudString(actualString));
+			return false;
+		}
+
 		partialProofData.push(new ProofLine(currDeps, currLineNum.toString(), toTombstoneString(currLine), currRule, currJust)); //final line
 	
-		for(var j=0; j<partialProofData.length; j++) //print debug code
+		for(var j=0; j<partialProofData.length; j++)		 //print debug code
 			console.log(partialProofData[j].getLineAsString());
 
-		let proof_line_validator = new ProofValidator(formulaTree, partialProofData, false); //partial validation only
-		if(proof_line_validator.isProofValid()){
-			displayValidFeedback("[Line " +currLineNum+"]: This line is currently valid. Rule usage is valid and line dependencies are correct.");
-		}else{
-			displayFeedback(proof_line_validator.getFeedback());
+
+
+		let proof_line_validator = null;
+		try{
+			proof_line_validator = new ProofValidator(formulaTree, partialProofData, false); //partial validation only
+		}catch(e){
+			displayFeedback("[Line " +currLineNum+"]: This line is not valid. Perhaps check the line numbers used for justifying the rule usage.");
 		}
+
+		if(proof_line_validator!=null && proof_line_validator.isProofValid()){ //proof is valid
+			displayValidFeedback("[Line " +currLineNum+"]: This line is currently valid. Rule usage is valid and line dependencies are correct.");
+		}else if(proof_line_validator!=null && !proof_line_validator.isProofValid()){ //proof is not valid
+			displayFeedback(proof_line_validator.getFeedback());
+		}else{
+			console.log("proof_line_validator is somehow null.");
+		}
+	});
+
+	//when enter key is pressed on formula entry, trigger formula submission
+	$("#formula").keypress(function(e) {
+	    if(e.which == 13){
+	    	$("#logic-submit").trigger("click");
+	    }
 	});
 
 
@@ -344,15 +428,30 @@ $(document).ready(function(){
 	///////////////////////////////////////////////////////////////////////////////
 
 	/**
+	 *	A function that updates the line numbers for each line after a row is added or deleted
+	 */
+	function updateRowNumbers(){
+		//for each row in proof-table
+		$("#proof-table tr").each(function(i, row){
+			let $row = $(row),
+				$lineNum = $row.find('p[name*="lineNum"]'),
+				newLineNum = i+1;
+
+			$lineNum.text( "(" + newLineNum + ")" );
+		});
+	}
+
+	/**
 	 *	A function to check if the given rule string is a rule that requires exactly one justification
 	 *	@param  {String}  rule - rule in the form of a string
 	 *	@return {Boolean} newArr - true if rule uses exactly one justification
 	 */
 	function isOneJustificationRule(rule){
 		rule = rule.toLowerCase();
-		if(rule!=="andelim" || rule!=="orintro" || rule!=="notintro" || rule!=="notelim" || rule!=="efq")
-			return false;
-		return true;
+		if(rule==="andelim" || rule==="orintro" || rule==="notintro" || rule==="notelim" || rule==="efq"){
+			return true;
+		}
+		return false;
 	}
 
 	/**
@@ -362,9 +461,10 @@ $(document).ready(function(){
 	 */
 	function isTwoJustificationRule(rule){
 		rule = rule.toLowerCase();
-		if(rule!=="andintro" || rule!=="impintro" || rule!=="impelim" || rule!=="raa")
-			return false;
-		return true;
+		if(rule==="andintro" || rule==="impintro" || rule==="impelim" || rule==="raa"){
+			return true;
+		}
+		return false;
 	}
 
 	/**
@@ -464,10 +564,11 @@ $(document).ready(function(){
 	 */
 	function getCleanRow(){
 		var cols = "";
-			cols += '<td style="width: 10%">	<input name="dependencyInput" class="form-control input-sm" placeholder="Deps." title="Dependencies: e.g. 1,2"></td>';
-			cols += '<td style="width: 40%">	<input name="proofLineInput" class="form-control input-sm" placeholder="Proof Line (use symbols or F for ⊥)" title="Proposition: use symbols above or F for falsum"></td>';
-			cols += '<td>						<select name="ruleInput" class="selectpicker form-control input-sm"><option value="null" style="display: none">select rule</option><option value="assume">assume</option><option value="andIntro">∧-intro</option><option value="andElim">∧-elim</option><option value="impIntro">→-intro</option><option value="impElim">→-elim</option><option value="orIntro">∨-intro</option><option value="orElim">∨-elim</option><option value="notIntro">¬-intro</option><option value="notElim">¬-elim</option><option value="raa">RAA</option><option value="efq">⊥-elim</option></select></td>';
-			cols += '<td style="width: 10%">	<input name="justificationInput" class="form-control input-sm" placeholder="Justifications" title="Rule justifications: e.g. 1,2"></td>';
+			cols += '<td style="width: 10%">	<input name="dependencyInput" class="form-control input-sm" title="Dependencies: e.g. 1,2"></td>';
+			cols += '<td style="width: 3%">		<p style="margin: 0" name="lineNum"></p></td>';
+			cols += '<td style="width: 40%">	<input name="proofLineInput" class="form-control input-sm" title="Proposition: use symbols above or F for falsum"></td>';
+			cols += '<td>						<select name="ruleInput" class="selectpicker form-control input-sm"><option value="null" style="display: none"></option><option value="assume">assume</option><option value="andIntro">∧-intro</option><option value="andElim">∧-elim</option><option value="impIntro">→-intro</option><option value="impElim">→-elim</option><option value="orIntro">∨-intro</option><option value="orElim">∨-elim</option><option value="notIntro">¬-intro</option><option value="notElim">¬-elim</option><option value="raa">RAA</option><option value="efq">⊥-elim</option></select></td>';
+			cols += '<td style="width: 10%">	<input name="justificationInput" class="form-control input-sm" title="Rule justifications: e.g. 1,2"></td>';
 			cols += '<td> <button class="btn-success btn-sm btnCheckRow">?</button> </td>';
 			cols += '<td> <button class="btn-danger btn-sm btnDelRow">x</button> </td>';
 			cols += '<td> <button class="btn-info btn-sm btnAddRowAbove">↑</button> </td>';
@@ -481,6 +582,7 @@ $(document).ready(function(){
 	 *	@return {String} newFormula - A tombstone-compatible string
 	 */	
 	function toTombstoneString(formula){
+		formula = formula.toUpperCase();
 		formula = formula.replace(new RegExp("→", "g"), "->");
 		formula = formula.replace(new RegExp("∧", "g"), "&");
 		formula = formula.replace(new RegExp("∨", "g"), "||");
@@ -496,6 +598,7 @@ $(document).ready(function(){
 	 *	@return {String} newFormula - A tombstone-compatible string
 	 */	
 	function toNatdudString(formula){
+		formula = formula.toUpperCase();
 		formula = formula.replace(new RegExp("->", "g"), "→");
 		formula = formula.replace(new RegExp("&", "g"), "∧");
 		formula = formula.replace(new RegExp(/\|\|/, "g"), "∨");
@@ -511,6 +614,7 @@ $(document).ready(function(){
 	 *	@return {String} newFormula - formula string with logic symbols
 	 */	
 	function toUserDisplayString(formula){
+		formula = formula.toUpperCase();
 		formula = formula.replace(new RegExp("->", "g"), "→");
 		formula = formula.replace(new RegExp(">", "g"), "→");
 		formula = formula.replace(new RegExp("&&", "g"), "∧");
