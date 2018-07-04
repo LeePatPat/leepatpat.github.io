@@ -332,9 +332,12 @@ $(document).ready(function(){
 			actualString = "";
 		//loop through all table rows up until the row that wants to be checked
 		$("#proof-table tr").each(function(i, row){	
-			if(i===0) return true; //skip proof table headers
-			else if(i === currLineNum) return false; //we've reached the current line, break
-			else if( $.inArray( i.toString(), currJust ) === -1 ) return true; //skip to next line if this line is not in the justifications
+			if(i===0)
+				return true; //skip proof table headers
+			else if(i === currLineNum)
+				return false; //we've reached the current line, break
+			else if( $.inArray( i.toString(), currJust ) === -1 )
+				return true; //skip to next line if this line is not in the justifications
 
 			let $row   = $(row),
 				$deps  = $row.find('input[name*="dependencyInput"]').val().replace(/\s/g,''),
@@ -1027,10 +1030,7 @@ class ProofValidator {
                 var currentRule = currentLine.getRule().toLowerCase();
                 var currentRuleJustification = currentLine.getRuleDependencies();
 
-                if(i+1 === this.proof.length && currentLineDeps.length > 0){ //fullValidation && last line AND there are still line dependencies
-                    this._addProblemToProblemList(currentLineNumber, "All the proof steps are valid, but some assumptions have not been discharged, so the theorem has not been proved.");
-                    return false;
-                }else if(this._isLineBlank(currentLine)){
+                if(this._isLineBlank(currentLine)){
                     continue; //ignore completely blank lines
                 }
 
@@ -1152,12 +1152,6 @@ class ProofValidator {
                     this._addProblemToProblemList(currentLineNumber, "You must select a rule from the options given.");
                     return false;
             }
-        }
-
-        //check assumptions are discharged only when fullValidation flag is active
-        if(this.fullValidation===true && this.assumeList.length > 0){
-            this._addProblemToProblemList(currentLineNumber, "All assumptions have not been discharged.");
-            return false;
         }
 
         this.problemList.push("Proof is valid! Rule usage is valid, line dependencies are correct and all assumptions are discharged.");

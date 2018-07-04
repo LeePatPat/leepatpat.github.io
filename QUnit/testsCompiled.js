@@ -158,20 +158,6 @@ QUnit.module("Proof Valiadator - Full Validation Units", function() {
 		assert.ok( pv.isProofValid() , getProofAsString(proof));
 	});
 
-	QUnit.test( "Detecting Undischarged Assumptions", function( assert ) {
-		var tree  = stringToParseTree("P->(P||(Q&~R))");
-		var proof = [];
-
-		proof.push( new ProofLine([1], 1, "P",    			"assume",   []   ) );
-		proof.push( new ProofLine([2], 2, "S", 				"assume", 	[]   ) );
-		proof.push( new ProofLine([1], 3, "P||(Q&~R)", 		"orintro", 	[1]  ) );
-		proof.push( new ProofLine([],  4, "P->(P||(Q&~R))", "impintro", [1,3]) );
-
-		var pv = new ProofValidator(tree, proof, true);
-
-		assert.notOk( pv.isProofValid() , pv.getFeedback()[0]);
-	});
-
 	QUnit.test( "Final Line Is Not Initial Theroem Input", function( assert ) {
 		var tree  = stringToParseTree("A->A");
 		var proof = [];
@@ -1413,10 +1399,7 @@ class ProofValidator {
                 var currentRule = currentLine.getRule().toLowerCase();
                 var currentRuleJustification = currentLine.getRuleDependencies();
 
-                if(i+1 === this.proof.length && currentLineDeps.length > 0){ //fullValidation && last line AND there are still line dependencies
-                    this._addProblemToProblemList(currentLineNumber, "All the proof steps are valid, but some assumptions have not been discharged, so the theorem has not been proved.");
-                    return false;
-                }else if(this._isLineBlank(currentLine)){
+                if(this._isLineBlank(currentLine)){
                     continue; //ignore completely blank lines
                 }
 
@@ -1538,12 +1521,6 @@ class ProofValidator {
                     this._addProblemToProblemList(currentLineNumber, "You must select a rule from the options given.");
                     return false;
             }
-        }
-
-        //check assumptions are discharged only when fullValidation flag is active
-        if(this.fullValidation===true && this.assumeList.length > 0){
-            this._addProblemToProblemList(currentLineNumber, "All assumptions have not been discharged.");
-            return false;
         }
 
         this.problemList.push("Proof is valid! Rule usage is valid, line dependencies are correct and all assumptions are discharged.");

@@ -109,10 +109,7 @@ class ProofValidator {
                 var currentRule = currentLine.getRule().toLowerCase();
                 var currentRuleJustification = currentLine.getRuleDependencies();
 
-                if(i+1 === this.proof.length && currentLineDeps.length > 0){ //fullValidation && last line AND there are still line dependencies
-                    this._addProblemToProblemList(currentLineNumber, "All the proof steps are valid, but some assumptions have not been discharged, so the theorem has not been proved.");
-                    return false;
-                }else if(this._isLineBlank(currentLine)){
+                if(this._isLineBlank(currentLine)){
                     continue; //ignore completely blank lines
                 }
 
@@ -234,12 +231,6 @@ class ProofValidator {
                     this._addProblemToProblemList(currentLineNumber, "You must select a rule from the options given.");
                     return false;
             }
-        }
-
-        //check assumptions are discharged only when fullValidation flag is active
-        if(this.fullValidation===true && this.assumeList.length > 0){
-            this._addProblemToProblemList(currentLineNumber, "All assumptions have not been discharged.");
-            return false;
         }
 
         this.problemList.push("Proof is valid! Rule usage is valid, line dependencies are correct and all assumptions are discharged.");
