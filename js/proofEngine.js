@@ -1236,9 +1236,6 @@ class ProofValidator {
 
 
 
-        console.log("WE ARE FINISHED orElim SYNTAX CHECKING");
-
-
         //---------------------LINE DEP CHECKS-----------------------------//
         let gammaDeps = dep1line.getDependencies().sort();    //Gamma
         let dep2deps  = dep2line.getDependencies().sort();    //l
@@ -1246,8 +1243,6 @@ class ProofValidator {
         let dep4deps  = dep4line.getDependencies().sort();    //n
         let dep5deps  = dep5line.getDependencies().sort();    //{n} union Sigma
         let currDeps  = currentLine.getDependencies().sort(); //Gamma union Delta union Sigma
-
-        console.log("BEFORE FIRST LINE DEP SEQUENT CHECK");
 
         //check if 3rd line referenced relies upon the 2nd line referenced
         //i.e. check if they form a sequent. If not, return an error.
@@ -1265,8 +1260,6 @@ class ProofValidator {
             return false;
         }
 
-        console.log("WE ARE FINISHED FIRST LINE DEP SEQUENT CHECK");
-
         //check if 5th line referenced relies upon the 4th line referenced
         //i.e. check if they form a sequent. If not, return an error.
         var fourthFifthReferenceSequenceCheck = false;
@@ -1282,8 +1275,6 @@ class ProofValidator {
             this._addProblemToProblemList(currentLineNumber, "To use ∨-elim, the fourth and fifth proof lines referenced should form a sequent. The formula in the fifth line referenced must depend on the assumption in the fourth line referenced.");
             return false;
         }
-
-        console.log("WE ARE FINISHED SECOND LINE DEP SEQUENT CHECK");
 
         //get Delta from {l, Delta}
         let tempDeps = dep2deps.concat(dep3deps);
@@ -1303,8 +1294,6 @@ class ProofValidator {
             deltaDeps.push(tempDeps[i]);
         }
 
-        console.log("WE ARE FINISHED FIRST DEPS CHECK");
-
         //get Sigma from {n, Sigma}
         tempDeps = dep4deps.concat(dep5deps);
         removeIndexes = []; //list of indexes to remove from tempDeps
@@ -1323,8 +1312,6 @@ class ProofValidator {
             sigmaDeps.push(tempDeps[i]);
         }
 
-        console.log("WE ARE FINISHED SECOND DEPS CHECK");
-
         //combine all greek sets and check if the user has the same
         var greekSet = gammaDeps.concat(deltaDeps.concat(sigmaDeps)).sort();
         greekSet = new Set(greekSet);
@@ -1340,7 +1327,6 @@ class ProofValidator {
                 this._addProblemToProblemList(currentLineNumber, "The dependencies should not include the assumption in the fourth proof line referenced. This assumption should be discharged by ∨-elim.");
                 return false;
             }
-
             this._addProblemToProblemList(currentLineNumber, "The dependencies are incorrect. The dependencies should consist of those for the disjunction (in the first proof line referenced) together with any additional assumptions used in deducing the conclusion (in the third and fifth proof lines referenced) from the two disjuncts (in the second and fourth proof lines referenced).");
             return false;
         }
